@@ -1,0 +1,2 @@
+local_user: "{{ lookup('env', 'USER') }}"
+local_public_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"

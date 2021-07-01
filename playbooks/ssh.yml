@@ -1,0 +1,42 @@
+---
+- name: Ensure ssh accessability to node
+  hosts: all
+  tags:
+    - ssh
+  tasks:
+    - name: Copy local public key to node ssh authorized file
+      tags:
+        - ssh-copy-key
+      ansible.posix.authorized_key:
+        user: "{{ ansible_user }}"
+        state: present
+        key: "{{ local_public_key }}"
+
+    - name: Add ssh configuration to local ~/.ssh/config
+      tags:
+        - ssh-config
+      local_action:
+        module: ansible.builtin.blockinfile
+        path: ~/.ssh/config
+        block: |
+          Host {{ inventory_hostname }}
+            Hostname {{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}
+            User {{ ansible_user }}
+            Port {{ hostvars[inventory_hostname].get('ansible_ssh_port', 22)  }}
+        marker: "# {mark} for {{ inventory_hostname }}"
+        create: yes
+        backup: yes
+
+- name: Harden the node ssh service
+  hosts: all
+  become: yes
+  collections:
+    - devsec.hardening
+  roles:
+    - ssh_hardening
+  vars:
+    ssh_custom_options:
+      - "StreamLocalBindUnlink yes"
+  tags:
+    - ssh
+    - ssh-hardening
